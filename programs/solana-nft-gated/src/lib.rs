@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{Mint, TokenAccount};
+use anchor_spl::token_interface::{Mint, TokenAccount};
 
 declare_id!("F17Fg2ZHx1UZqNCBeueuuiDiVJwBLP8NqrLCPJPFQ4Pg");
 
@@ -90,7 +90,7 @@ pub mod solana_nft_gated {
 pub struct CreateGate<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
-    pub required_mint: Account<'info, Mint>,
+    pub required_mint: InterfaceAccount<'info, Mint>,
     #[account(init, payer = authority, space = 8 + Gate::INIT_SPACE,
         seeds = [b"gate", authority.key().as_ref(), required_mint.key().as_ref()], bump)]
     pub gate: Account<'info, Gate>,
@@ -105,7 +105,7 @@ pub struct Access<'info> {
     pub gate: Account<'info, Gate>,
     #[account(constraint = holder_token_account.mint == gate.required_mint,
         constraint = holder_token_account.owner == holder.key())]
-    pub holder_token_account: Account<'info, TokenAccount>,
+    pub holder_token_account: InterfaceAccount<'info, TokenAccount>,
     #[account(init, payer = holder, space = 8 + AccessRecord::INIT_SPACE,
         seeds = [b"access", gate.key().as_ref(), holder.key().as_ref()], bump)]
     pub access_record: Account<'info, AccessRecord>,
@@ -119,7 +119,7 @@ pub struct ReAccess<'info> {
     pub gate: Account<'info, Gate>,
     #[account(constraint = holder_token_account.mint == gate.required_mint,
         constraint = holder_token_account.owner == holder.key())]
-    pub holder_token_account: Account<'info, TokenAccount>,
+    pub holder_token_account: InterfaceAccount<'info, TokenAccount>,
     #[account(mut, seeds = [b"access", gate.key().as_ref(), holder.key().as_ref()], bump = access_record.bump,
         has_one = gate)]
     pub access_record: Account<'info, AccessRecord>,
