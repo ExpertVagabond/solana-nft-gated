@@ -15,6 +15,13 @@ pub mod solana_nft_gated {
         gate.name = name;
         gate.total_accesses = 0;
         gate.bump = ctx.bumps.gate;
+
+        emit!(GateCreated {
+            gate: gate.key(),
+            authority: gate.authority,
+            required_collection: gate.required_mint,
+        });
+
         Ok(())
     }
 
@@ -31,6 +38,14 @@ pub mod solana_nft_gated {
         record.first_access = Clock::get()?.unix_timestamp;
         record.access_count = 1;
         record.bump = ctx.bumps.access_record;
+
+        emit!(AccessGranted {
+            gate: gate.key(),
+            holder: ctx.accounts.holder.key(),
+            nft_mint: record.mint_used,
+            access_count: record.access_count,
+        });
+
         Ok(())
     }
 
@@ -42,12 +57,30 @@ pub mod solana_nft_gated {
 
         let record = &mut ctx.accounts.access_record;
         record.access_count = record.access_count.checked_add(1).ok_or(GateError::Overflow)?;
+
+        emit!(AccessGranted {
+            gate: gate.key(),
+            holder: ctx.accounts.holder.key(),
+            nft_mint: ctx.accounts.holder_token_account.mint,
+            access_count: record.access_count,
+        });
+
         Ok(())
     }
 
     pub fn revoke_access(ctx: Context<RevokeAccess>) -> Result<()> {
+        let holder = ctx.accounts.access_record.wallet;
+        let gate_key = ctx.accounts.gate.key();
+
         let record = &mut ctx.accounts.access_record;
         record.access_count = 0;
+
+        emit!(AccessRevoked {
+            gate: gate_key,
+            authority: ctx.accounts.authority.key(),
+            holder,
+        });
+
         Ok(())
     }
 }
@@ -121,6 +154,28 @@ pub struct AccessRecord {
     pub first_access: i64,
     pub access_count: u64,
     pub bump: u8,
+}
+
+#[event]
+pub struct GateCreated {
+    pub gate: Pubkey,
+    pub authority: Pubkey,
+    pub required_collection: Pubkey,
+}
+
+#[event]
+pub struct AccessGranted {
+    pub gate: Pubkey,
+    pub holder: Pubkey,
+    pub nft_mint: Pubkey,
+    pub access_count: u64,
+}
+
+#[event]
+pub struct AccessRevoked {
+    pub gate: Pubkey,
+    pub authority: Pubkey,
+    pub holder: Pubkey,
 }
 
 #[error_code]
